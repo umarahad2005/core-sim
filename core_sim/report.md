@@ -479,29 +479,44 @@ Module 3 blocks panel.
 | Separation of logic and UI               | `core/MemoryManager.java` vs `ui/...`       |
 | Two menus in dashboard                   | unchanged from Module 2 (`Modules` updated) |
 
-## 6. Cross-Module Sync
+## 6. Cross-Module Sync (Demand Paging)
 
-Module 3 is wired into the same data flow as Modules 1 and 2 — creating a
-process in Module 1 makes it instantly visible in Module 2 *and* Module 3,
-and running it in Module 2 animates Module 3 live.
+Module 3 is wired into the same data flow as Modules 1 and 2, but the
+simulator follows the **demand-paging workflow** described in the OS
+manual: a process gets physical frames only when it actually executes,
+never at creation time. This matches how real kernels (Linux, Windows,
+macOS) allocate memory and makes the manual's "Page Fault on first
+reference" example happen naturally during a Module 2 run.
 
 | Trigger                              | What happens elsewhere                                        |
 | ------------------------------------ | -------------------------------------------------------------- |
-| **Module 1: Create Process**         | PCB added to `ProcessManager` (visible in M2 + M1 table); `memoryManager.allocatePages(pid, ceil(mem / PAGE_SIZE_MB))` is auto-called so its pages show up in the Module 3 frames grid and page-table view. |
-| **Module 1: Destroy Process**        | PCB removed; `memoryManager.freeProcess(pid)` releases its frames immediately. |
-| **Module 1: Dispatch / Block / …**   | Updates the same PCBs; Module 3 re-reads them on every refresh (running-process highlight in PCB cell). |
-| **Module 2: Scheduler.tick()**       | Fires `onTick(pcb)` for the PCB that executed during the time unit; `ControlPanel` references one of that PCB's pages: `accessPage(pid, (clock − 1) mod pagesFor(pid))`. With memory over-subscribed this produces live page faults / LRU evictions in Module 3 while the Gantt chart fills. |
+| **Module 1: Create Process**         | PCB added to `ProcessManager` (visible in M2 ready queue + M1 process table). **No frames are touched** — Module 3 still shows the PCB as having zero resident pages. |
+| **Module 1: Destroy Process**        | PCB removed; `memoryManager.freeProcess(pid)` releases any frames it accumulated during execution. |
+| **Module 1: Dispatch / Block / …**   | Updates the same PCBs; Module 3 re-reads them on every refresh (running-process highlight in the sidebar PCB card). |
+| **Module 2: Scheduler.tick()**       | Fires `onTick(pcb)` for the PCB that executed during the time unit; `ControlPanel` references one of that PCB's pages: `accessPage(pid, (clock − 1) mod pagesFor(pid))`. **First reference is always a page fault** (no frames pre-allocated). With memory over-subscribed, subsequent references produce live LRU evictions in Module 3 while the Gantt chart fills. |
 | **Module 2: Run / Step / Reset**     | Calls a sibling-refresh callback that re-renders Module 1 *and* Module 3 (`refreshSiblingsOfScheduler`). |
-| **Module 3: Reset / Free / Apply**   | Memory state changes only — never touches PCBs in M1 / M2 so the kernel side stays authoritative. |
+| **Module 3: Reset / Free / Apply**   | Memory state changes only — never touches PCBs in M1 / M2 so the kernel side stays authoritative. The Module 3 toolbar (Allocate / Access / Reference String) still works for standalone paging demos without running the scheduler. |
 
-Conversion is controlled by a single constant on `MemoryManager`:
+**Why demand paging?** It's the standard approach used by every modern
+OS and the one the manual asks for. The alternative — eager allocation
+at create time — was rejected because:
+1. It hides the *Page Fault* concept (page faults only happen during
+   the demand-paging workflow).
+2. It conflates "process exists" with "process is in physical memory",
+   which is exactly the abstraction Module 3 is supposed to break.
+3. It makes the Module 2 → Module 3 link feel decorative instead of
+   causal.
+
+Page-size conversion is controlled by a single constant on `MemoryManager`:
 
 - `MemoryManager.PAGE_SIZE_MB = 64`
 - `MemoryManager.pagesNeededFor(memMB) = max(1, ceil(memMB / 64))`
 
-So a 128 MB process gets 2 pages; a 256 MB process gets 4 pages; the
-default 4-frame memory therefore fits 2 default processes before
-replacements start — perfect for demonstrating LRU live during scheduling.
+So a 128 MB process has a 2-page address space; a 256 MB process has a
+4-page address space. `pagesNeededFor` is used by `onSchedulerTickedPcb`
+to decide which page index to reference each tick — it cycles
+`(clock − 1) mod pagesFor(pid)` so the same process keeps faulting in
+different pages of its working set over time.
 
 ## 7. Tests
 

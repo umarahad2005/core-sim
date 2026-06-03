@@ -27,19 +27,9 @@ public class ControlPanel extends JFrame {
     private final JLabel readyLabel = new JLabel("[]");
     private final JLabel waitingLabel = new JLabel("[]");
 
-    // Dedicated PCB cells for the currently running process (Module 1 center).
-    private final JLabel rPidLbl       = new JLabel("—");
-    private final JLabel rStateLbl     = new JLabel("—");
-    private final JLabel rPriorityLbl  = new JLabel("—");
-    private final JLabel rBurstLbl     = new JLabel("—");
-    private final JLabel rRemainingLbl = new JLabel("—");
-    private final JLabel rMemoryLbl    = new JLabel("—");
-    private final JLabel rParentLbl    = new JLabel("—");
-    private final JLabel rChildrenLbl  = new JLabel("—");
-    private final JLabel rIoLbl        = new JLabel("—");
-
-    // Same PCB fields rendered vertically inside the sidebar so the running
-    // process is always visible while the user clicks operation buttons.
+    // PCB fields for the currently running process, rendered vertically
+    // inside the sidebar so the running process is always visible while the
+    // user clicks operation buttons.
     private final JLabel vPidLbl       = new JLabel("—");
     private final JLabel vStateLbl     = new JLabel("—");
     private final JLabel vPriorityLbl  = new JLabel("—");
@@ -205,7 +195,7 @@ public class ControlPanel extends JFrame {
         buttons.add(actionButton("■  Block Process",           Theme.WARN,    e -> onPidAction("Block",   manager::blockProcess)));
         buttons.add(actionButton("☼  Wakeup Process",          Theme.INFO,    e -> onPidAction("Wakeup",  manager::wakeupProcess)));
         buttons.add(actionButton("⇅  Change Priority",         Theme.ACCENT_2,e -> onChangePriority()));
-        buttons.add(Box.createVerticalStrut(10));
+        buttons.add(Box.createVerticalStrut(4));
         buttons.add(actionButton("🗑  Clear Log",              Theme.TEXT_DIM,e -> logArea.setText("")));
         buttons.add(Box.createVerticalGlue());
 
@@ -237,7 +227,7 @@ public class ControlPanel extends JFrame {
         JPanel rows = new JPanel();
         rows.setOpaque(false);
         rows.setLayout(new BoxLayout(rows, BoxLayout.Y_AXIS));
-        rows.setBorder(new EmptyBorder(4, 4, 8, 4));
+        rows.setBorder(new EmptyBorder(2, 2, 4, 2));
 
         rows.add(pcbVerticalRow("PID",       vPidLbl,       Theme.SUCCESS));
         rows.add(pcbVerticalRow("State",     vStateLbl,     Theme.SUCCESS));
@@ -259,14 +249,14 @@ public class ControlPanel extends JFrame {
     private JComponent pcbVerticalRow(String name, JLabel value, Color accent) {
         JPanel row = new JPanel(new BorderLayout(8, 0));
         row.setOpaque(false);
-        row.setBorder(new EmptyBorder(5, 8, 5, 8));
-        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        row.setBorder(new EmptyBorder(2, 8, 2, 8));
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
 
         JLabel nameLbl = new JLabel(name);
         nameLbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
         nameLbl.setForeground(accent);
 
-        value.setFont(new Font(Font.MONOSPACED, Font.BOLD, 13));
+        value.setFont(new Font(Font.MONOSPACED, Font.BOLD, 12));
         value.setForeground(Theme.TEXT);
         value.setHorizontalAlignment(SwingConstants.RIGHT);
 
@@ -279,27 +269,10 @@ public class ControlPanel extends JFrame {
         JPanel center = new JPanel(new BorderLayout(12, 12));
         center.setOpaque(false);
 
-        JPanel topStack = new JPanel();
-        topStack.setOpaque(false);
-        topStack.setLayout(new BoxLayout(topStack, BoxLayout.Y_AXIS));
-        topStack.add(boxedFullWidth(buildQueues()));
-        topStack.add(Box.createVerticalStrut(12));
-        topStack.add(boxedFullWidth(buildRunningPcb()));
-
-        center.add(topStack, BorderLayout.NORTH);
-        center.add(buildTable(), BorderLayout.CENTER);
-        center.add(buildLog(), BorderLayout.SOUTH);
+        center.add(buildQueues(), BorderLayout.NORTH);
+        center.add(buildTable(),  BorderLayout.CENTER);
+        center.add(buildLog(),    BorderLayout.SOUTH);
         return center;
-    }
-
-    /** Wrap a fixed-height component so BoxLayout doesn't stretch it vertically. */
-    private JComponent boxedFullWidth(JComponent inner) {
-        JPanel p = new JPanel(new BorderLayout());
-        p.setOpaque(false);
-        p.add(inner, BorderLayout.CENTER);
-        p.setMaximumSize(new Dimension(Integer.MAX_VALUE, inner.getPreferredSize().height));
-        p.setAlignmentX(Component.LEFT_ALIGNMENT);
-        return p;
     }
 
     private JComponent buildQueues() {
@@ -326,69 +299,6 @@ public class ControlPanel extends JFrame {
         card.add(t, BorderLayout.NORTH);
         card.add(valueLabel, BorderLayout.CENTER);
         return wrapRounded(card);
-    }
-
-    /**
-     * Dedicated horizontal PCB table for the currently dispatched (RUNNING)
-     * process. Each PCB field (PID, State, Priority, Burst, Remaining, Memory,
-     * Parent, Children, I/O) renders as its own cell with a header + value,
-     * so the user can read every field of the running PCB at a glance without
-     * scanning the full process table.
-     */
-    private JComponent buildRunningPcb() {
-        JPanel row = new JPanel(new GridLayout(1, 9, 8, 0));
-        row.setOpaque(false);
-        row.setBorder(new EmptyBorder(6, 10, 10, 10));
-
-        row.add(pcbFieldCell("PID",       rPidLbl,       Theme.SUCCESS));
-        row.add(pcbFieldCell("State",     rStateLbl,     Theme.SUCCESS));
-        row.add(pcbFieldCell("Priority",  rPriorityLbl,  Theme.ACCENT));
-        row.add(pcbFieldCell("Burst",     rBurstLbl,     Theme.ACCENT));
-        row.add(pcbFieldCell("Remaining", rRemainingLbl, Theme.ACCENT));
-        row.add(pcbFieldCell("Memory MB", rMemoryLbl,    Theme.INFO));
-        row.add(pcbFieldCell("Parent",    rParentLbl,    Theme.TEXT_DIM));
-        row.add(pcbFieldCell("Children",  rChildrenLbl,  Theme.TEXT_DIM));
-        row.add(pcbFieldCell("I/O",       rIoLbl,        Theme.WARN));
-
-        JPanel wrap = new JPanel(new BorderLayout());
-        wrap.setBackground(Theme.BG_PANEL);
-        wrap.setBorder(Theme.titled("Running Process PCB"));
-        wrap.add(row, BorderLayout.CENTER);
-        return wrapRounded(wrap);
-    }
-
-    private JComponent pcbFieldCell(String title, JLabel valueLabel, Color accent) {
-        JPanel cell = new JPanel(new BorderLayout(0, 4));
-        cell.setBackground(Theme.BG_RAISED);
-        cell.setBorder(new EmptyBorder(8, 10, 8, 10));
-
-        JLabel t = new JLabel(title);
-        t.setFont(new Font("Segoe UI", Font.BOLD, 10));
-        t.setForeground(accent);
-
-        valueLabel.setFont(new Font(Font.MONOSPACED, Font.BOLD, 14));
-        valueLabel.setForeground(Theme.TEXT);
-        valueLabel.setHorizontalAlignment(SwingConstants.LEFT);
-
-        cell.add(t, BorderLayout.NORTH);
-        cell.add(valueLabel, BorderLayout.CENTER);
-
-        JPanel rounded = new JPanel(new BorderLayout()) {
-            @Override protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(Theme.BG_RAISED);
-                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 10, 10));
-                g2.setColor(accent);
-                g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), 3, 10, 10));
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        rounded.setOpaque(false);
-        cell.setOpaque(false);
-        rounded.add(cell, BorderLayout.CENTER);
-        return rounded;
     }
 
     private JComponent buildTable() {
@@ -449,7 +359,7 @@ public class ControlPanel extends JFrame {
         AccentPillButton b = new AccentPillButton(text, accent);
         b.addActionListener(listener);
         b.setAlignmentX(Component.LEFT_ALIGNMENT);
-        b.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        b.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
         return b;
     }
 
@@ -457,9 +367,13 @@ public class ControlPanel extends JFrame {
         JTextField priorityField = new JTextField("1");
         JTextField memoryField = new JTextField("128");
         JTextField burstField = new JTextField("5");
-        JLabel hint = new JLabel(
-                "Memory is auto-paged: " + MemoryManager.PAGE_SIZE_MB
-              + " MB / page -> Module 3 will allocate the matching number of pages.");
+        JLabel hint = new JLabel("<html><div style='width:340px'>"
+                + "<b>Demand paging:</b> pages are NOT allocated when the process is "
+                + "created. Module 3 loads them on the fly when Module 2's scheduler "
+                + "actually runs this process — page faults happen on first reference "
+                + "(" + MemoryManager.PAGE_SIZE_MB + " MB per page, max ceil(memory/"
+                + MemoryManager.PAGE_SIZE_MB + ") pages)."
+                + "</div></html>");
         hint.setForeground(Theme.TEXT_DIM);
         hint.setFont(Theme.FONT_BODY);
         Object[] msg = {
@@ -475,11 +389,10 @@ public class ControlPanel extends JFrame {
             int m = Integer.parseInt(memoryField.getText().trim());
             int b = Integer.parseInt(burstField.getText().trim());
             if (b < 0) throw new NumberFormatException("burst must be >= 0");
-            PCB created = manager.createProcess(p, m, b);
-            // Sync: auto-allocate pages for the new PCB so Module 3 shows it
-            // alongside Module 1 / Module 2 without the user having to type
-            // anything in the Memory tab.
-            memoryManager.allocatePages(created.getPid(), MemoryManager.pagesNeededFor(m));
+            // Demand paging: the PCB is created but NO physical frames are
+            // assigned now. Module 3 will fault pages in as the scheduler
+            // actually runs this process via Scheduler.onTick -> accessPage().
+            manager.createProcess(p, m, b);
             refresh();
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Priority, Memory, and Burst must be non-negative integers.",
@@ -566,22 +479,21 @@ public class ControlPanel extends JFrame {
                 Theme.SUCCESS);
     }
 
-    /** Push the same nine values into both the horizontal and vertical PCB cards. */
+    /** Push the running-process values into the vertical sidebar PCB card. */
     private void setPcbCells(String pid, String state, String priority,
                              String burst, String remaining, String memory,
                              String parent, String children, String io,
                              Color stateColor) {
-        rPidLbl.setText(pid);          vPidLbl.setText(pid);
-        rStateLbl.setText(state);      vStateLbl.setText(state);
-        rStateLbl.setForeground(stateColor);
+        vPidLbl.setText(pid);
+        vStateLbl.setText(state);
         vStateLbl.setForeground(stateColor);
-        rPriorityLbl.setText(priority);   vPriorityLbl.setText(priority);
-        rBurstLbl.setText(burst);         vBurstLbl.setText(burst);
-        rRemainingLbl.setText(remaining); vRemainingLbl.setText(remaining);
-        rMemoryLbl.setText(memory);       vMemoryLbl.setText(memory);
-        rParentLbl.setText(parent);       vParentLbl.setText(parent);
-        rChildrenLbl.setText(children);   vChildrenLbl.setText(children);
-        rIoLbl.setText(io);               vIoLbl.setText(io);
+        vPriorityLbl.setText(priority);
+        vBurstLbl.setText(burst);
+        vRemainingLbl.setText(remaining);
+        vMemoryLbl.setText(memory);
+        vParentLbl.setText(parent);
+        vChildrenLbl.setText(children);
+        vIoLbl.setText(io);
     }
 
     private void appendLog(String msg) {
@@ -661,10 +573,10 @@ public class ControlPanel extends JFrame {
         AccentPillButton(String text, Color accent) {
             super(text);
             this.accent = accent;
-            setFont(new Font("Segoe UI Semibold", Font.PLAIN, 13));
+            setFont(new Font("Segoe UI Semibold", Font.PLAIN, 12));
             setForeground(Theme.TEXT);
             setHorizontalAlignment(SwingConstants.LEFT);
-            setBorder(new EmptyBorder(8, 14, 8, 14));
+            setBorder(new EmptyBorder(5, 12, 5, 12));
             setContentAreaFilled(false);
             setFocusPainted(false);
             setOpaque(false);
