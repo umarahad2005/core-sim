@@ -112,6 +112,32 @@ public class Scheduler {
         return true;
     }
 
+    /**
+     * Algorithm-specific dispatch. FCFS / Round Robin honour ready-queue
+     * FIFO order; SJF picks the smallest {@code burstTime}; Priority picks
+     * the lowest {@code priority} number (lower = higher priority, the
+     * convention used throughout the project). Ties are broken FIFO.
+     */
+    private PCB pickNext() {
+        Queue<PCB> q = manager.getReadyQueue();
+        if (q.isEmpty()) return null;
+        return switch (algorithm) {
+            case FCFS, ROUND_ROBIN -> q.poll();
+            case SJF              -> pollBest(q, (a, b) -> a.getBurstTime() < b.getBurstTime());
+            case PRIORITY         -> pollBest(q, (a, b) -> a.getPriority()  < b.getPriority());
+        };
+    }
+
+    /** Functional helper: remove and return the queue entry that wins the comparator. */
+    private PCB pollBest(Queue<PCB> q, java.util.function.BiPredicate<PCB, PCB> aBeatsB) {
+        PCB best = null;
+        for (PCB p : q) {
+            if (best == null || aBeatsB.test(p, best)) best = p;
+        }
+        if (best != null) q.remove(best);
+        return best;
+    }
+
     private void finishRunning(PCB pcb) {
         pcb.setState(ProcessState.TERMINATED);
         pcb.setCompletionTime(clock);

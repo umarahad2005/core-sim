@@ -167,6 +167,12 @@ Implemented features:
 
 - **FCFS scheduling** — non-preemptive, drains the ready queue in arrival
   order.
+- **SJF scheduling** — non-preemptive Shortest Job First; on every
+  dispatch the scheduler scans the ready queue and picks the PCB with
+  the smallest `burstTime` (FIFO tie-break).
+- **Priority scheduling** — non-preemptive; picks the ready PCB with the
+  lowest `priority` number (lower = higher priority, the convention used
+  throughout the project; FIFO tie-break).
 - **Round Robin scheduling** — preemptive, fixed time quantum (configurable
   in the GUI).
 - **Animated step-by-step execution** — `javax.swing.Timer` ticks the
@@ -279,7 +285,9 @@ per unit, so a longer schedule simply scrolls horizontally.
 
 | Manual requirement                       | Where it lives                          |
 | ---------------------------------------- | --------------------------------------- |
-| FCFS algorithm                           | `Scheduler.tick()` (non-preemptive path)|
+| FCFS algorithm                           | `Scheduler.pickNext()` -> `q.poll()`    |
+| SJF algorithm                            | `Scheduler.pickNext()` -> shortest burst|
+| Priority algorithm                       | `Scheduler.pickNext()` -> lowest priority|
 | Round Robin algorithm                    | `Scheduler.tick()` (quantum branch)     |
 | Ready queue visualization                | `SchedulingPanel.formatReady()`         |
 | Running process display                  | `SchedulingPanel.runningLabel`          |

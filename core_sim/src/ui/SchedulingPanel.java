@@ -359,7 +359,7 @@ public class SchedulingPanel extends JPanel {
     }
 
     private class MetricsTableModel extends AbstractTableModel {
-        private final String[] cols = {"PID", "Burst", "Remaining", "Start", "Completion", "Waiting", "Turnaround", "State"};
+        private final String[] cols = {"PID", "Priority", "Burst", "Remaining", "Start", "Completion", "Waiting", "Turnaround", "State"};
 
         public int getRowCount() { return manager.getProcesses().size(); }
         public int getColumnCount() { return cols.length; }
@@ -369,13 +369,14 @@ public class SchedulingPanel extends JPanel {
             PCB p = manager.getProcesses().get(row);
             return switch (col) {
                 case 0 -> p.getPid();
-                case 1 -> p.getBurstTime();
-                case 2 -> p.getRemainingTime();
-                case 3 -> p.getStartTime() < 0 ? "—" : p.getStartTime();
-                case 4 -> p.getCompletionTime() < 0 ? "—" : p.getCompletionTime();
-                case 5 -> p.getState() == ProcessState.TERMINATED ? p.getWaitingTime() : "—";
-                case 6 -> p.getState() == ProcessState.TERMINATED ? p.getTurnaroundTime() : "—";
-                case 7 -> p.getState();
+                case 1 -> p.getPriority();
+                case 2 -> p.getBurstTime();
+                case 3 -> p.getRemainingTime();
+                case 4 -> p.getStartTime() < 0 ? "—" : p.getStartTime();
+                case 5 -> p.getCompletionTime() < 0 ? "—" : p.getCompletionTime();
+                case 6 -> p.getState() == ProcessState.TERMINATED ? p.getWaitingTime() : "—";
+                case 7 -> p.getState() == ProcessState.TERMINATED ? p.getTurnaroundTime() : "—";
+                case 8 -> p.getState();
                 default -> "";
             };
         }
@@ -389,7 +390,7 @@ public class SchedulingPanel extends JPanel {
                 c.setBackground(row % 2 == 0 ? Theme.BG_PANEL : Theme.BG_RAISED);
                 c.setForeground(Theme.TEXT);
             }
-            if (col == 7 && v instanceof ProcessState ps) {
+            if (col == 8 && v instanceof ProcessState ps) {
                 c.setForeground(switch (ps) {
                     case RUNNING    -> Theme.SUCCESS;
                     case READY      -> Theme.ACCENT;

@@ -14,6 +14,8 @@ public class SmokeTest {
     public static void main(String[] args) {
         module1Tests();
         module2FcfsTests();
+        module2SjfTests();
+        module2PriorityTests();
         module2RoundRobinTests();
         module3LruTests();
         module3ReferenceStringParserTests();
@@ -86,6 +88,77 @@ public class SmokeTest {
         check(s.getGantt().get(0).pid == 1 && s.getGantt().get(0).start == 0 && s.getGantt().get(0).end == 4, "seg0 = P1 [0..4]");
         check(s.getGantt().get(1).pid == 2 && s.getGantt().get(1).start == 4 && s.getGantt().get(1).end == 7, "seg1 = P2 [4..7]");
         check(s.getGantt().get(2).pid == 3 && s.getGantt().get(2).start == 7 && s.getGantt().get(2).end == 9, "seg2 = P3 [7..9]");
+    }
+
+    private static void module2SjfTests() {
+        System.out.println();
+        System.out.println("=== Module 2: SJF (non-preemptive) ===");
+        ProcessManager m = new ProcessManager();
+        m.setLogger(s -> System.out.println("LOG: " + s));
+        Scheduler s = new Scheduler(m);
+        s.setLogger(msg -> System.out.println("SCHED: " + msg));
+        s.setAlgorithm(Algorithm.SJF);
+
+        // Arrival order: P1=4, P2=3, P3=2. SJF must run shortest first.
+        PCB p1 = m.createProcess(1, 64, 4);
+        PCB p2 = m.createProcess(1, 64, 3);
+        PCB p3 = m.createProcess(1, 64, 2);
+
+        int safety = 0;
+        while (s.tick() && safety++ < 100) { /* drain */ }
+
+        check(s.getClock() == 9, "SJF: total = 4+3+2 = 9, got " + s.getClock());
+
+        // Expected execution order: P3 (2) -> P2 (3) -> P1 (4)
+        check(s.getGantt().size() == 3, "SJF: 3 gantt segments");
+        check(s.getGantt().get(0).pid == p3.getPid() && s.getGantt().get(0).end == 2,
+                "seg0 = P3 [0..2] (shortest first)");
+        check(s.getGantt().get(1).pid == p2.getPid() && s.getGantt().get(1).end == 5,
+                "seg1 = P2 [2..5]");
+        check(s.getGantt().get(2).pid == p1.getPid() && s.getGantt().get(2).end == 9,
+                "seg2 = P1 [5..9] (longest last)");
+
+        check(p3.getCompletionTime() == 2, "P3 completion = 2");
+        check(p2.getCompletionTime() == 5, "P2 completion = 5");
+        check(p1.getCompletionTime() == 9, "P1 completion = 9");
+        check(p3.getWaitingTime() == 0, "P3 waiting = 0");
+        check(p2.getWaitingTime() == 2, "P2 waiting = 2");
+        check(p1.getWaitingTime() == 5, "P1 waiting = 5");
+    }
+
+    private static void module2PriorityTests() {
+        System.out.println();
+        System.out.println("=== Module 2: Priority (non-preemptive, lower = higher) ===");
+        ProcessManager m = new ProcessManager();
+        m.setLogger(s -> System.out.println("LOG: " + s));
+        Scheduler s = new Scheduler(m);
+        s.setLogger(msg -> System.out.println("SCHED: " + msg));
+        s.setAlgorithm(Algorithm.PRIORITY);
+
+        // Arrival order: P1=prio3, P2=prio1, P3=prio2. All burst 3.
+        // Priority order: P2 -> P3 -> P1.
+        PCB p1 = m.createProcess(3, 64, 3);
+        PCB p2 = m.createProcess(1, 64, 3);
+        PCB p3 = m.createProcess(2, 64, 3);
+
+        int safety = 0;
+        while (s.tick() && safety++ < 100) { /* drain */ }
+
+        check(s.getClock() == 9, "Priority: total = 9");
+        check(s.getGantt().size() == 3, "Priority: 3 gantt segments");
+        check(s.getGantt().get(0).pid == p2.getPid() && s.getGantt().get(0).end == 3,
+                "seg0 = P2 [0..3] (highest priority first)");
+        check(s.getGantt().get(1).pid == p3.getPid() && s.getGantt().get(1).end == 6,
+                "seg1 = P3 [3..6]");
+        check(s.getGantt().get(2).pid == p1.getPid() && s.getGantt().get(2).end == 9,
+                "seg2 = P1 [6..9] (lowest priority last)");
+
+        check(p2.getCompletionTime() == 3, "P2 completion = 3");
+        check(p3.getCompletionTime() == 6, "P3 completion = 6");
+        check(p1.getCompletionTime() == 9, "P1 completion = 9");
+        check(p2.getWaitingTime() == 0, "P2 waiting = 0");
+        check(p3.getWaitingTime() == 3, "P3 waiting = 3");
+        check(p1.getWaitingTime() == 6, "P1 waiting = 6");
     }
 
     private static void module2RoundRobinTests() {
