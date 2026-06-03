@@ -5,12 +5,15 @@ import model.ProcessState;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 import java.util.function.Consumer;
 
 public class Scheduler {
 
     public enum Algorithm {
         FCFS("First Come First Serve"),
+        SJF("Shortest Job First (non-preemptive)"),
+        PRIORITY("Priority (non-preemptive, lower = higher)"),
         ROUND_ROBIN("Round Robin");
         private final String label;
         Algorithm(String label) { this.label = label; }
@@ -71,14 +74,14 @@ public class Scheduler {
         PCB running = manager.getRunningProcess();
 
         if (running == null) {
-            running = manager.getReadyQueue().poll();
+            running = pickNext();
             if (running == null) return false;
             running.setState(ProcessState.RUNNING);
             if (running.getStartTime() < 0) running.setStartTime(clock);
             manager.setRunningProcess(running);
             currentQuantumUsed = 0;
             logger.accept("t=" + clock + " : dispatch P" + running.getPid()
-                    + " (remaining=" + running.getRemainingTime() + ")");
+                    + " [" + algorithm.name() + "] (remaining=" + running.getRemainingTime() + ")");
         }
 
         if (running.getRemainingTime() <= 0) {
